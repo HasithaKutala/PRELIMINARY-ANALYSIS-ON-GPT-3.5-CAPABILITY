@@ -1,0 +1,134 @@
+import pandas as pd
+from transformers import GPT2LMHeadModel, GPT2Tokenizer
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+import openai
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+
+ 
+class open_ai_modeling():
+
+    def function_openai_model(cl,input_data):
+
+        openai.api_key = 
+
+        input_text_column = input_data['comment']
+
+        category_column = input_data['politeness']
+        
+        sentiment_column=input_data['sentiment']
+        
+        
+
+        print("Analysing the comments")
+
+        eval_text = input_text_column
+
+        eval_category = category_column
+        
+        eval_sentiment=sentiment_column
+
+        prompt1_list = []
+
+        sentiment_score_list = []
+
+        tone_list = []
+       
+
+        for input_text, category, sentiment in zip(eval_text, eval_category, eval_sentiment):
+
+
+            # Construct the prompt for politeness classification
+            input_text = input_text[:4090]
+
+            prompt1 = f"""
+            Analyze the following comment written by a developer.
+            Please provide a classification for the tone of the comment in terms of 'politeness',
+            assigning one of two labels: 'polite' or 'impolite'
+            Along with the classification, provide a confidence level from 0 to 1 indicating the certainty of the assigned label
+            and explain the reasoning behind the classification based on the context and content of the comment
+            output should be in this format: first classsification: polite or impolite| confidence level: |reason.
+            {input_text}
+            """
+
+            response1 = openai.Completion.create(
+                engine="text-davinci-003",
+                prompt=prompt1,
+                max_tokens=60,
+                n=1,
+                stop=None,
+                temperature=0.2,  # Adjust the temperature for desired randomness
+            )
+
+            generated_response1 = response1.choices[0].text.strip().lower()
+
+            response_l  = "\n".join([line for line in generated_response1.splitlines() if line.strip()])
+
+            print(f"generated response 1 : {response_l}")
+
+            prompt1_list.append(response_l)
+
+            # Construct the prompt for sentiment analysis
+            prompt2 = f"""
+            Analyze the sentiment polarity of the given text and provide a sentiment score between -1 and 1,
+            where: -1 represents a strongly negative sentiment, 0 is neutral, 1 represents a strongly positive sentiment 
+            Explain the reasoning behind the assigned sentiment score based on the context and content of the comment:
+            output should be in this format: sentiment: |reason:
+            {input_text}
+            """
+
+            response2 = openai.Completion.create(
+                engine="text-davinci-003",
+                prompt=prompt2,
+                max_tokens=60,
+                n=1,
+                stop=None,
+                temperature=0.2,  # Adjust the temperature for desired randomness
+            )
+
+            generated_response2 = response2.choices[0].text.strip().lower()
+
+            sentiment_score_list.append(generated_response2)
+
+            print(f"generated response 2 : {generated_response2}")
+
+      
+            
+            # Construct the prompt for tone and emotion analysis
+            prompt3 = f"""
+            Analyze the following comment written by a developer. Consider the full text, each individual word, the overall tone, and the context in which words are used.
+            Identify any emotions conveyed in the text. Explain each identified emotion directly. 
+
+            {input_text}
+            """
+            response3 = openai.Completion.create(
+                engine="text-davinci-003",
+                prompt=prompt3,
+                max_tokens=60,
+                n=1,
+                stop=None,
+                temperature=0.2,  # Adjust the temperature for desired randomness
+            )
+
+            generated_response3 = response3.choices[0].text.strip().lower()
+
+            tone_list.append(generated_response3)
+            print(f"generated response 3 : {generated_response3}")
+
+            print("###################################################")
+
+        df_output  = pd.DataFrame()
+        df_output["Comment"] = eval_text
+        df_output["Actual_results of politeness"] = eval_category.to_list()
+        df_output["Actual_results of sentiment"] = eval_sentiment.to_list()
+        df_output["GPT response of politeness"] = prompt1_list
+        df_output["GPT response of sentiment score"] = sentiment_score_list
+        df_output["GPT response of emotional tone"] = tone_list
+        
+        
+        print(df_output)
+
+        df_output.to_csv("Final_output.csv")
+
+        return ""
